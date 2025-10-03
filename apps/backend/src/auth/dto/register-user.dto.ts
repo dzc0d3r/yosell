@@ -1,6 +1,18 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength } from 'class-validator';
+import { IsEmail, IsNotEmpty, IsString, MinLength, Validate, ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
+import { isValidPhoneNumber } from 'libphonenumber-js';
 
+
+@ValidatorConstraint({ name: 'isAlgerianPhoneNumber', async: false })
+export class IsAlgerianPhoneNumber implements ValidatorConstraintInterface {
+  validate(phoneNumber: string, args: ValidationArguments) {
+    return isValidPhoneNumber(phoneNumber, 'DZ');
+  }
+
+  defaultMessage(args: ValidationArguments) {
+    return 'Phone number must be a valid Algerian number.';
+  }
+}
 export class RegisterUserDto {
   @ApiProperty({
     example: 'Ali Baba',
@@ -9,7 +21,7 @@ export class RegisterUserDto {
   })
   @IsString()
   @IsNotEmpty()
-  name: string;
+  fullname: string;
 
   @ApiProperty({
     example: 'ali.baba@yosell.app',
@@ -28,4 +40,13 @@ export class RegisterUserDto {
   @IsString()
   @MinLength(8, { message: 'Password must be at least 8 characters long.' })
   password: string;
+  @ApiProperty({
+    example: '0512345678', // Example of an Algerian number
+    description: 'The seller\'s valid Algerian phone number (+213).',
+    required: true,
+  })
+  @IsString()
+  @IsNotEmpty()
+  @Validate(IsAlgerianPhoneNumber)
+  phoneNumber: string;
 }

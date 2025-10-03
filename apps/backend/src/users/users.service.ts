@@ -12,16 +12,25 @@ export class UsersService {
       where: { email },
     });
   }
+  async findByPhoneNumber(phoneNumber: string) {
+    return this.prisma.user.findUnique({
+      where: { phoneNumber },
+    });
+  }
 
-  // We will create this DTO shortly
-  async create(data: Prisma.UserCreateInput) { 
+
+
+
+  async create(data: Prisma.UserCreateInput) {
     return this.prisma.user.create({
       data,
-      select: {
+      select: { // Ensure we return all new fields
         id: true,
-        name: true,
+        fullname: true,
         email: true,
+        phoneNumber: true,
         createdAt: true,
+        phoneVerified: false,
       },
     });
   }

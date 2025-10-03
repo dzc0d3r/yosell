@@ -55,8 +55,10 @@ enum RiskLevel {
 
 model User {
   id                         String             @id @default(cuid())
-  name                       String?
-  email                      String             @unique
+  fullname                   String?            // RENAMED from 'name'
+  phoneNumber                String?            @unique // ADDED and marked as unique 
+  phoneVerified              DateTime?          // ADDED for Alpha version feature
+  email                      String             @unique 
   emailVerified              DateTime?
   image                      String?
   hashedPassword             String?
