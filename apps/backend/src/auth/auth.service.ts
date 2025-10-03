@@ -3,9 +3,12 @@ import { UsersService } from '../users/users.service';
 import { RegisterUserDto } from './dto/register-user.dto';
 import * as argon2 from 'argon2';
 import { parsePhoneNumberFromString } from 'libphonenumber-js';
+import { VerificationService } from '../verification/verification.service';
+
+
 @Injectable()
 export class AuthService {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService, private readonly verificationService: VerificationService) {}
 
 async register(registerUserDto: RegisterUserDto) {
     // 1. Check for email conflict
@@ -40,6 +43,10 @@ async register(registerUserDto: RegisterUserDto) {
     });
     
     // TODO: Trigger email verification flow
+    await this.verificationService.createEmailVerificationLink(
+      newUser.id,
+      newUser.email,
+    );
     // TODO (Alpha): Trigger phone verification flow
     
     return newUser;
