@@ -37,4 +37,25 @@ export class MessagingService {
       // In production, you'd have more robust error handling/logging
     }
   }
+    async sendPasswordResetEmail(toEmail: string, resetLink: string) {
+    const from = new Sender('noreply@test-z0vklo6rzpvl7qrx.mlsender.net', 'Yosell Security');
+    const recipients = [new Recipient(toEmail)];
+
+    const emailParams = new EmailParams()
+      .setFrom(from)
+      .setTo(recipients)
+      .setSubject('Your Yosell Password Reset Request')
+      .setHtml(
+        `<h1>Password Reset Request</h1>
+         <p>We received a request to reset the password for your Yosell account. Please click the button below to set a new password. This link is valid for 15 minutes.</p>
+         <a href="${resetLink}" style="padding: 10px; background-color: #dc3545; color: white; text-decoration: none;">Reset Your Password</a>
+         <p>If you did not request a password reset, please ignore this email or contact our support if you have concerns.</p>`,
+      );
+    
+    try {
+      await this.mailerSend.email.send(emailParams);
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+    }
+  }
 }
