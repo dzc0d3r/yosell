@@ -25,7 +25,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Yosell API')
     .setDescription('The official API for the Yosell platform.')
-    .setVersion('1.0')
+    .setVersion('0.1-beta')
     .build();
   
   const document = SwaggerModule.createDocument(app, config);

@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsNotEmpty, IsString, IsUUID } from 'class-validator';
+import { IsNotEmpty, IsString} from 'class-validator';
 
 export class VerifyEmailDto {
   @ApiProperty({
@@ -8,6 +8,5 @@ export class VerifyEmailDto {
   })
   @IsString()
   @IsNotEmpty()
-  @IsUUID('4') // Ensure it's a valid UUIDv4
   token: string;
 }

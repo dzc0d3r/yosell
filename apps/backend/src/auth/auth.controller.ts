@@ -4,12 +4,13 @@ import { RegisterUserDto } from './dto/register-user.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
-
+import { Throttle } from '@nestjs/throttler';
 @ApiTags('1. Authentication')
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  @Throttle({ default: { limit: 5, ttl: 60000 }})
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: '🟢 Register seller (Public)', description: "Creates a new seller account using email, password, phone number and send a verification email to verify the provided email"})
@@ -20,6 +21,9 @@ export class AuthController {
     return this.authService.register(registerUserDto);
   }
 
+
+
+  @Throttle({ default: { limit: 3, ttl: 600000 }})
   @Post('forgot-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '🟠 Forgot password (Email)' })
@@ -28,6 +32,7 @@ export class AuthController {
     return this.authService.requestPasswordReset(forgotPasswordDto);
   }
 
+  @Throttle({ default: { limit: 5, ttl: 60000 }})
   @Post('reset-password')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: '🔵 Reset password (Token Required)'  })
