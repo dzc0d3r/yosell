@@ -9,6 +9,9 @@ import { VerificationService } from '../verification/verification.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { ConfigService } from '@nestjs/config';
 import { MessagingService } from '../messaging/messaging.service';
+import { generateSecureToken, hashToken } from '../utils/token.utils';
+
+
 
 @Injectable()
 export class AuthService {
@@ -67,35 +70,41 @@ async register(registerUserDto: RegisterUserDto) {
     const { email } = forgotPasswordDto;
     const user = await this.usersService.findByEmail(email);
 
-    // SECURITY: Always return a success-like response to prevent user enumeration.
-    if (!user) {
-      return { message: 'If a user with that email exists, a password reset link has been sent.' };
+if (user) {
+      // [UPDATED] Use our secure generator
+      const { rawToken, hashedToken } = generateSecureToken();
+      const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      await this.prisma.$transaction([
+        this.prisma.passwordResetToken.deleteMany({ where: { identifier: email } }),
+        this.prisma.passwordResetToken.create({
+          data: {
+            identifier: email,
+            token: hashedToken, // [UPDATED] Store the HASH
+            expires,
+          },
+        }),
+      ]);
+
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+      // [UPDATED] Send the RAW token in the link
+      const resetLink = `${frontendUrl}/reset-password?token=${rawToken}`;
+
+      await this.messagingService.sendPasswordResetEmail(email, resetLink);
     }
-
-    const token = crypto.randomUUID();
-    const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minute expiry
-
-    await this.prisma.$transaction([
-      this.prisma.passwordResetToken.deleteMany({ where: { identifier: email } }),
-      this.prisma.passwordResetToken.create({
-        data: { identifier: email, token, expires },
-      }),
-    ]);
-
-    const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-    const resetLink = `${frontendUrl}/reset-password?token=${token}`;
-
-    await this.messagingService.sendPasswordResetEmail(email, resetLink);
     
     return { message: 'If a user with that email exists, a password reset link has been sent.' };
   }
 
   // --- NEW METHOD 2: RESET THE PASSWORD ---
   async resetPassword(resetPasswordDto: ResetPasswordDto) {
-    const { token, newPassword } = resetPasswordDto;
+const { token: rawToken, newPassword } = resetPasswordDto;
+    
+    // [UPDATED] Hash the incoming raw token to find it
+    const hashedToken = hashToken(rawToken);
 
     const resetToken = await this.prisma.passwordResetToken.findUnique({
-      where: { token },
+      where: { token: hashedToken }, // [UPDATED] Query by hash
     });
 
     if (!resetToken || resetToken.expires < new Date()) {
@@ -104,20 +113,13 @@ async register(registerUserDto: RegisterUserDto) {
 
     const hashedPassword = await argon2.hash(newPassword);
 
-    // Atomic transaction: find user, update password, delete token
     await this.prisma.$transaction(async (tx) => {
       await tx.user.update({
         where: { email: resetToken.identifier },
         data: { hashedPassword: hashedPassword },
       });
-
-      // SECURITY: Consume the token immediately after use.
-      await tx.passwordResetToken.delete({
-        where: { token },
-      });
+      await tx.passwordResetToken.delete({ where: { token: hashedToken } }); // [UPDATED] Delete by hash
     });
-    
-    // TODO (Future): Invalidate all existing refresh tokens/sessions for this user.
 
     return { message: 'Your password has been successfully reset.' };
   }
