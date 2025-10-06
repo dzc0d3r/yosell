@@ -6,9 +6,10 @@ import { AuthModule } from './auth/auth.module';
 import { ConfigModule } from './config/config.module';
 import { MessagingModule } from './messaging/messaging.module';
 import { VerificationModule } from './verification/verification.module';
+import { PoliciesModule } from './policies/policies.module';
 
 @Module({
-  imports: [HealthModule, PrismaModule, UsersModule, AuthModule, ConfigModule, MessagingModule, VerificationModule],
+  imports: [HealthModule, PrismaModule, UsersModule, AuthModule, ConfigModule, MessagingModule, VerificationModule, PoliciesModule],
   controllers: [],
   providers: [],
 })

@@ -1,9 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -18,80 +13,91 @@ datasource db {
 // --- ENUMS ---
 
 enum SubscriptionTier {
-  bronze
-  silver
-  gold
-  diamond
+  SEED
+  SPROUT
+  BLOOM
+  ZENITH
+  @@map("subscription_tier")
 }
 
 enum VerificationStatus {
-  unverified
-  pending
-  verified
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  @@map("verification_status")
 }
 
 enum OrderStatus {
-  new
-  confirmed
-  shipped
-  delivered
-  failed_delivery
-  returned
+  NEW
+  CONFIRMED
+  SHIPPED
+  DELIVERED
+  FAILED_DELIVERY
+  RETURNED
+  @@map("order_status")
 }
 
 enum DeliveryProvider {
-  yalidine
-  maestro
-  other
+  YALIDINE
+  MAESTRO
+  OTHER
+  @@map("delivery_provider")
 }
 
 enum RiskLevel {
-  low
-  medium
-  high
+  LOW
+  MEDIUM
+  HIGH
+  @@map("risk_level")
 }
 
 // --- MODELS ---
 
 model User {
   id                         String             @id @default(cuid())
-  fullname                   String?            // RENAMED from 'name'
-  phoneNumber                String?            @unique // ADDED and marked as unique 
-  phoneVerified              DateTime?          // ADDED for Alpha version feature
-  email                      String             @unique 
-  emailVerified              DateTime?
+  fullname                   String?
+  email                      String             @unique
+  phoneNumber                String?            @unique @map("phone_number")
+  emailVerified              DateTime?          @map("email_verified")
+  phoneVerified              DateTime?          @map("phone_verified")
   image                      String?
-  hashedPassword             String?
-  subscriptionTier           SubscriptionTier   @default(bronze)
-  trustScore                 Int                @default(70)
-  businessVerificationStatus VerificationStatus @default(unverified)
-  yalidineApiKey             String?
-  maestroApiKey              String?
-  createdAt                  DateTime           @default(now())
-  updatedAt                  DateTime           @updatedAt
+  hashedPassword             String?            @map("hashed_password")
+  subscriptionTier           SubscriptionTier   @default(SEED) @map("subscription_tier")
+  trustScore                 Int                @default(70) @map("trust_score")
+  businessVerificationStatus VerificationStatus @default(UNVERIFIED) @map("business_verification_status")
+  yalidineApiKey             String?            @map("yalidine_api_key")
+  maestroApiKey              String?            @map("maestro_api_key")
+  createdAt                  DateTime           @default(now()) @map("created_at")
+  updatedAt                  DateTime           @updatedAt @map("updated_at")
 
   accounts Account[]
   products Product[]
   orders   Order[]
+  sessions Session[]
+  reviews  Review[]
+  badges   Badge[]    @relation("UsersToBadges")
+
+  @@map("users")
 }
 
 model Account {
   id                String  @id @default(cuid())
-  userId            String
+  userId            String  @map("user_id")
   type              String
   provider          String
-  providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
-  expires_at        Int?
-  token_type        String?
+  providerAccountId String  @map("provider_account_id")
+  refreshToken      String? @db.Text @map("refresh_token")
+  accessToken       String? @db.Text @map("access_token")
+  expiresAt         Int?    @map("expires_at")
+  tokenType         String? @map("token_type")
   scope             String?
-  id_token          String? @db.Text
-  session_state     String?
+  idToken           String? @db.Text @map("id_token")
+  sessionState      String? @map("session_state")
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
+  @@map("accounts")
 }
 
 model VerificationToken {
@@ -100,66 +106,138 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+  @@map("verification_tokens")
 }
+
 model PasswordResetToken {
   identifier String
   token      String   @unique
   expires    DateTime
 
   @@unique([identifier, token])
+  @@map("password_reset_tokens")
 }
-model Product {
-  id                   String    @id @default(cuid())
-  name                 String
-  description          String?
-  price                Decimal   @db.Decimal(10, 2)
-  images               Json?
-  stockQuantity        Int       @default(0)
-  landingPageSubdomain String?   @unique
-  landingPageTheme     String    @default("crimson")
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+model Product {
+  id            String    @id @default(cuid())
+  name          String
+  description   String?
+  price         Decimal   @db.Decimal(10, 2)
+  images        Json?
+  stockQuantity Int       @default(0) @map("stock_quantity")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  userId     String   @map("user_id")
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  categoryId String   @map("category_id")
+  category   Category @relation(fields: [categoryId], references: [id])
+  
   orders Order[]
+  tags   Tag[]  @relation("ProductsToTags")
+
+  @@map("products")
 }
 
 model Order {
-  id                   String           @id @default(cuid())
-  buyerName            String
-  buyerPhone           String
-  buyerAddressWilaya   String
-  buyerAddressCommune  String
-  buyerAddressStreet   String?
-  status               OrderStatus      @default(new)
-  deliveryProvider     DeliveryProvider?
-  trackingNumber       String?
-  deliverySlipUrl      String?
-  buyerRiskScore       Int              @default(0)
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
+  id                  String           @id @default(cuid())
+  buyerName           String           @map("buyer_name")
+  buyerPhone          String           @map("buyer_phone")
+  buyerAddressWilaya  String           @map("buyer_address_wilaya")
+  buyerAddressCommune String           @map("buyer_address_commune")
+  buyerAddressStreet  String?          @map("buyer_address_street")
+  status              OrderStatus      @default(NEW)
+  deliveryProvider    DeliveryProvider? @map("delivery_provider")
+  trackingNumber      String?          @map("tracking_number")
+  deliverySlipUrl     String?          @map("delivery_slip_url")
+  buyerRiskScore      Int              @default(0) @map("buyer_risk_score")
+  createdAt           DateTime         @default(now()) @map("created_at")
+  updatedAt           DateTime         @updatedAt @map("updated_at")
 
-  productId String
+  productId String  @map("product_id")
   product   Product @relation(fields: [productId], references: [id])
-  sellerId  String
+  sellerId  String  @map("seller_id")
   seller    User    @relation(fields: [sellerId], references: [id])
   review    Review?
+
+  @@map("orders")
 }
 
 model Review {
-  id        String   @id @default(cuid())
-  rating    Int
-  comment   String?
-  createdAt DateTime @default(now())
-
-  orderId String @unique
+  id               String    @id @default(cuid())
+  rating           Int
+  comment          String?
+  createdAt        DateTime  @default(now()) @map("created_at")
+  verifiedPurchase Boolean   @default(true) @map("verified_purchase")
+  helpfulCount     Int       @default(0) @map("helpful_count")
+  
+  orderId String @unique @map("order_id")
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  userId String? @map("user_id")
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("reviews")
 }
 
 model BuyerProfile {
   id                      String    @id @default(cuid())
-  failedDeliveryCount     Int       @default(0)
-  successfulDeliveryCount Int       @default(0)
-  riskLevel               RiskLevel @default(low)
+  failedDeliveryCount     Int       @default(0) @map("failed_delivery_count")
+  successfulDeliveryCount Int       @default(0) @map("successful_delivery_count")
+  riskLevel               RiskLevel @default(LOW) @map("risk_level")
+
+  badges Badge[] @relation("BuyerProfilesToBadges")
+
+  @@map("buyer_profiles")
+}
+
+model Category {
+  id       String     @id @default(cuid())
+  name     String
+  slug     String     @unique
+  parentId String?    @map("parent_id")
+  parent   Category?  @relation("NestedCategories", fields: [parentId], references: [id])
+  children Category[] @relation("NestedCategories")
+  
+  products Product[]
+
+  @@map("categories")
+}
+
+model Tag {
+  id    String  @id @default(cuid())
+  name  String
+  slug  String  @unique
+  color String?
+
+  products Product[] @relation("ProductsToTags")
+
+  @@map("tags")
+}
+
+model Badge {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  iconUrl     String?  @map("icon_url")
+  description String?
+
+  users         User[]         @relation("UsersToBadges")
+  buyerProfiles BuyerProfile[] @relation("BuyerProfilesToBadges")
+
+  @@map("badges")
+}
+
+model Session {
+  id                 String   @id @default(cuid())
+  userId             String   @map("user_id")
+  hashedRefreshToken String   @unique @map("hashed_refresh_token")
+  userAgent          String?  @map("user_agent")
+  ipAddress          String?  @map("ip_address")
+  expiresAt          DateTime @map("expires_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
 }
