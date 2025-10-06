@@ -3,14 +3,14 @@ import { VerificationService } from './verification.service';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
-@ApiTags('Verification')
+@ApiTags('1. Authentication')
 @Controller('verification')
 export class VerificationController {
   constructor(private readonly verificationService: VerificationService) {}
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Verify an email address using a token' })
+  @ApiOperation({ summary: '🔵 Verify an email address (Token Required)'})
   @ApiResponse({ status: 200, description: 'Email successfully verified.' })
   @ApiResponse({ status: 404, description: 'Invalid or expired verification link.' })
   verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
