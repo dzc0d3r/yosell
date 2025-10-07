@@ -23,7 +23,7 @@ export class AuthService {
                private readonly messagingService: MessagingService,
                 ) {}
 
-async register(registerUserDto: RegisterUserDto) {
+async registerSeller(registerUserDto: RegisterUserDto) {
     // 1. Check for email conflict
     const existingUserByEmail = await this.usersService.findByEmail(registerUserDto.email);
     if (existingUserByEmail) {
@@ -47,7 +47,7 @@ async register(registerUserDto: RegisterUserDto) {
     const hashedPassword = await argon2.hash(registerUserDto.password);
 
     // 5. Create the new user
-    const newUser = await this.usersService.create({
+    const newUser = await this.usersService.createSeller({
       fullname: registerUserDto.fullname,
       email: registerUserDto.email,
       hashedPassword: hashedPassword,

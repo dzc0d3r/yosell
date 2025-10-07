@@ -11,14 +11,14 @@ export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
   @Throttle({ default: { limit: 5, ttl: 60000 }})
-  @Post('register')
+  @Post('register/seller')
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: '🟢 Register seller (Public)', description: "Creates a new seller account using email, password, phone number and send a verification email to verify the provided email"})
   @ApiResponse({ status: 201, description: 'The seller account has been successfully created.'})
   @ApiResponse({ status: 409, description: 'A user with this email already exists.'})
   @ApiResponse({ status: 400, description: 'Invalid input data provided.'})
   register(@Body() registerUserDto: RegisterUserDto) {
-    return this.authService.register(registerUserDto);
+    return this.authService.registerSeller(registerUserDto);
   }
 
 

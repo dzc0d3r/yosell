@@ -21,9 +21,14 @@ export class UsersService {
 
 
 
-  async create(data: Prisma.UserCreateInput) {
+  async createSeller(data: Prisma.UserCreateInput) {
     return this.prisma.user.create({
-      data,
+      data: {
+        ...data,
+        roles: {
+          connect: { name: 'SELLER' },
+        },
+      },
       select: { // Ensure we return all new fields
         id: true,
         fullname: true,

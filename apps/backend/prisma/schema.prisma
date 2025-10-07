@@ -1,4 +1,3 @@
-// prisma/schema.prisma
 
 generator client {
   provider = "prisma-client-js"
@@ -18,6 +17,35 @@ enum SubscriptionTier {
   BLOOM
   ZENITH
   @@map("subscription_tier")
+}
+
+enum TeamRole {
+  OWNER
+  ADMIN
+  MEMBER
+  @@map("team_role")
+}
+
+enum ProductStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+  @@map("product_status")
+}
+
+enum CartStatus {
+  ACTIVE
+  ORDERED
+  ABANDONED
+  @@map("cart_status")
+}
+
+enum RecoveryStatus {
+  PENDING
+  CONTACTED
+  RECOVERED
+  CLOSED
+  @@map("recovery_status")
 }
 
 enum VerificationStatus {
@@ -63,21 +91,45 @@ model User {
   image                      String?
   hashedPassword             String?            @map("hashed_password")
   subscriptionTier           SubscriptionTier   @default(SEED) @map("subscription_tier")
-  trustScore                 Int                @default(70) @map("trust_score")
-  businessVerificationStatus VerificationStatus @default(UNVERIFIED) @map("business_verification_status")
-  yalidineApiKey             String?            @map("yalidine_api_key")
-  maestroApiKey              String?            @map("maestro_api_key")
-  createdAt                  DateTime           @default(now()) @map("created_at")
-  updatedAt                  DateTime           @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  
+  teamId                     String?            @map("team_id")
+  team                       Team?              @relation("TeamMembers", fields: [teamId], references: [id])
+  teamRole                   TeamRole?          @map("team_role")
 
-  accounts Account[]
-  products Product[]
-  orders   Order[]
-  sessions Session[]
-  reviews  Review[]
-  badges   Badge[]    @relation("UsersToBadges")
+  accounts      Account[]
+  sessions      Session[]
+  reviews       Review[]   @relation("UserReviews")
+  sellerOrders  Order[]    @relation("SellerOrders")
+  buyerOrders   Order[]    @relation("BuyerOrders")
+  ownedTeam     Team?      @relation("TeamOwner")
+  roles         Role[]     @relation("UsersToRoles")
+  badges        Badge[]    @relation("UsersToBadges")
+  cart          Cart?      @relation("UserCart")
+  products      Product[]  @relation("SellerProducts")
 
   @@map("users")
+}
+
+model Team {
+  id        String   @id @default(cuid())
+  name      String
+  ownerId   String   @unique @map("owner_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  owner   User   @relation("TeamOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  members User[] @relation("TeamMembers")
+
+  @@map("teams")
+}
+
+model Role {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[] @relation("UsersToRoles")
+
+  @@map("roles")
 }
 
 model Account {
@@ -98,6 +150,20 @@ model Account {
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
+}
+
+model Session {
+  id                 String   @id @default(cuid())
+  userId             String   @map("user_id")
+  hashedRefreshToken String   @unique @map("hashed_refresh_token")
+  userAgent          String?  @map("user_agent")
+  ipAddress          String?  @map("ip_address")
+  expiresAt          DateTime @map("expires_at")
+  createdAt          DateTime @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
 }
 
 model VerificationToken {
@@ -121,22 +187,49 @@ model PasswordResetToken {
 model Product {
   id            String    @id @default(cuid())
   name          String
+  slug          String    @unique
   description   String?
   price         Decimal   @db.Decimal(10, 2)
   images        Json?
   stockQuantity Int       @default(0) @map("stock_quantity")
+  status        ProductStatus @default(DRAFT)
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  userId     String   @map("user_id")
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sellerId   String   @map("seller_id")
+  seller     User     @relation("SellerProducts", fields: [sellerId], references: [id], onDelete: Cascade)
   categoryId String   @map("category_id")
-  category   Category @relation(fields: [categoryId], references: [id])
+  category   Category @relation("CategoryProducts", fields: [categoryId], references: [id])
   
-  orders Order[]
-  tags   Tag[]  @relation("ProductsToTags")
+  orders    Order[]
+  tags      Tag[]      @relation("ProductsToTags")
+  cartItems CartItem[]
 
   @@map("products")
+}
+
+model Category {
+  id       String     @id @default(cuid())
+  name     String
+  slug     String     @unique
+  parentId String?    @map("parent_id")
+  parent   Category?  @relation("NestedCategories", fields: [parentId], references: [id])
+  children Category[] @relation("NestedCategories")
+  
+  products Product[] @relation("CategoryProducts")
+
+  @@map("categories")
+}
+
+model Tag {
+  id    String  @id @default(cuid())
+  name  String
+  slug  String  @unique
+  color String?
+
+  products Product[] @relation("ProductsToTags")
+
+  @@map("tags")
 }
 
 model Order {
@@ -157,7 +250,11 @@ model Order {
   productId String  @map("product_id")
   product   Product @relation(fields: [productId], references: [id])
   sellerId  String  @map("seller_id")
-  seller    User    @relation(fields: [sellerId], references: [id])
+  seller    User    @relation("SellerOrders", fields: [sellerId], references: [id])
+  
+  buyerId   String? @map("buyer_id")
+  buyer     User?   @relation("BuyerOrders", fields: [buyerId], references: [id], onDelete: SetNull)
+
   review    Review?
 
   @@map("orders")
@@ -167,15 +264,15 @@ model Review {
   id               String    @id @default(cuid())
   rating           Int
   comment          String?
-  createdAt        DateTime  @default(now()) @map("created_at")
   verifiedPurchase Boolean   @default(true) @map("verified_purchase")
   helpfulCount     Int       @default(0) @map("helpful_count")
+  createdAt        DateTime  @default(now()) @map("created_at")
   
   orderId String @unique @map("order_id")
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-
+  
   userId String? @map("user_id")
-  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+  user   User?   @relation("UserReviews", fields: [userId], references: [id], onDelete: SetNull)
 
   @@map("reviews")
 }
@@ -191,30 +288,6 @@ model BuyerProfile {
   @@map("buyer_profiles")
 }
 
-model Category {
-  id       String     @id @default(cuid())
-  name     String
-  slug     String     @unique
-  parentId String?    @map("parent_id")
-  parent   Category?  @relation("NestedCategories", fields: [parentId], references: [id])
-  children Category[] @relation("NestedCategories")
-  
-  products Product[]
-
-  @@map("categories")
-}
-
-model Tag {
-  id    String  @id @default(cuid())
-  name  String
-  slug  String  @unique
-  color String?
-
-  products Product[] @relation("ProductsToTags")
-
-  @@map("tags")
-}
-
 model Badge {
   id          String   @id @default(cuid())
   name        String
@@ -228,16 +301,43 @@ model Badge {
   @@map("badges")
 }
 
-model Session {
-  id                 String   @id @default(cuid())
-  userId             String   @map("user_id")
-  hashedRefreshToken String   @unique @map("hashed_refresh_token")
-  userAgent          String?  @map("user_agent")
-  ipAddress          String?  @map("ip_address")
-  expiresAt          DateTime @map("expires_at")
-  createdAt          DateTime @default(now()) @map("created_at")
+model Cart {
+  id        String     @id @default(cuid())
+  userId    String?    @unique @map("user_id")
+  sessionId String?    @unique @map("session_id")
+  status    CartStatus @default(ACTIVE)
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+  
+  user  User?  @relation("UserCart", fields: [userId], references: [id], onDelete: Cascade)
+  items CartItem[]
+  abandonedCheckout AbandonedCheckout?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@map("carts")
+}
 
-  @@map("sessions")
+model CartItem {
+  id        String   @id @default(cuid())
+  quantity  Int
+  cartId    String   @map("cart_id")
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String   @map("product_id")
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@unique([cartId, productId])
+  @@map("cart_items")
+}
+
+model AbandonedCheckout {
+  id             String         @id @default(cuid())
+  cartId         String         @unique @map("cart_id")
+  cart           Cart           @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  contactInfo    Json?          @map("contact_info")
+  recoveryStatus RecoveryStatus @default(PENDING) @map("recovery_status")
+  recoveryToken  String?        @unique @map("recovery_token")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  @@map("abandoned_checkouts")
 }
