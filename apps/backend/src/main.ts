@@ -6,15 +6,17 @@ import {
 import { AppModule } from './app.module';
 import { VersioningType, ValidationPipe } from '@nestjs/common';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger'; // <-- Import Swagger tools
+import fastifyCookie from '@fastify/cookie';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
     new FastifyAdapter(),
   );
-
+  await app.register(fastifyCookie, {
+    secret: process.env.COOKIE_SECRET,
+  });
   app.setGlobalPrefix('api');
-
   app.enableVersioning({
     type: VersioningType.URI,
     defaultVersion: '1',
@@ -27,9 +29,9 @@ async function bootstrap() {
     .setDescription('The official API for the Yosell platform.')
     .setVersion('0.1-beta')
     .build();
-  
+
   const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('/', app, document , {
+  SwaggerModule.setup('/', app, document, {
     customSiteTitle: 'Yosell API docs',
     customfavIcon: 'https://unpkg.com/swagger-ui-dist@latest/favicon-32x32.png',
     customJs: [

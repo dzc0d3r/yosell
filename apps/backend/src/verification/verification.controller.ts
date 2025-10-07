@@ -10,9 +10,12 @@ export class VerificationController {
 
   @Post('verify-email')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: '🔵 Verify an email address (Token Required)'})
+  @ApiOperation({ summary: '🔵 Verify an email address (Token Required)' })
   @ApiResponse({ status: 200, description: 'Email successfully verified.' })
-  @ApiResponse({ status: 404, description: 'Invalid or expired verification link.' })
+  @ApiResponse({
+    status: 404,
+    description: 'Invalid or expired verification link.',
+  })
   verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
     return this.verificationService.verifyEmailToken(verifyEmailDto.token);
   }

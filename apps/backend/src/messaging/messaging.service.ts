@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import  { MailerSend, Recipient, Sender, EmailParams } from 'mailersend';
+import { MailerSend, Recipient, Sender, EmailParams } from 'mailersend';
 import type { MailerSend as Mailer } from 'mailersend';
 @Injectable()
 export class MessagingService {
@@ -8,12 +8,17 @@ export class MessagingService {
 
   constructor(private readonly configService: ConfigService) {
     this.mailerSend = new MailerSend({
-      apiKey: this.configService.get<string|undefined>('MAILERSEND_API_TOKEN') ?? '',
+      apiKey:
+        this.configService.get<string | undefined>('MAILERSEND_API_TOKEN') ??
+        '',
     });
   }
 
   async sendEmailVerification(toEmail: string, verificationLink: string) {
-    const from = new Sender('noreply@test-z0vklo6rzpvl7qrx.mlsender.net', 'Yosell Verification');
+    const from = new Sender(
+      'noreply@test-z0vklo6rzpvl7qrx.mlsender.net',
+      'Yosell Verification',
+    );
     const recipients = [new Recipient(toEmail)];
 
     const emailParams = new EmailParams()
@@ -25,11 +30,11 @@ export class MessagingService {
          <p>Please click the button below to verify your email address.</p>
          <a href="${verificationLink}" style="padding: 10px; background-color: #007bff; color: white; text-decoration: none;">Verify Email</a>
          <p>If you did not request this, please ignore this email.</p>`,
-      )
-      // For production, you would use a pre-designed template ID
-      // .setTemplateId('your_template_id_here')
-      // .setVariables([{ email: toEmail, substitutions: [...] }])
-    
+      );
+    // For production, you would use a pre-designed template ID
+    // .setTemplateId('your_template_id_here')
+    // .setVariables([{ email: toEmail, substitutions: [...] }])
+
     try {
       await this.mailerSend.email.send(emailParams);
     } catch (error) {
@@ -37,8 +42,11 @@ export class MessagingService {
       // In production, you'd have more robust error handling/logging
     }
   }
-    async sendPasswordResetEmail(toEmail: string, resetLink: string) {
-    const from = new Sender('noreply@test-z0vklo6rzpvl7qrx.mlsender.net', 'Yosell Security');
+  async sendPasswordResetEmail(toEmail: string, resetLink: string) {
+    const from = new Sender(
+      'noreply@test-z0vklo6rzpvl7qrx.mlsender.net',
+      'Yosell Security',
+    );
     const recipients = [new Recipient(toEmail)];
 
     const emailParams = new EmailParams()
@@ -51,7 +59,7 @@ export class MessagingService {
          <a href="${resetLink}" style="padding: 10px; background-color: #dc3545; color: white; text-decoration: none;">Reset Your Password</a>
          <p>If you did not request a password reset, please ignore this email or contact our support if you have concerns.</p>`,
       );
-    
+
     try {
       await this.mailerSend.email.send(emailParams);
     } catch (error) {

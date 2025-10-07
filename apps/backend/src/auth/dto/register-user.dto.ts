@@ -1,7 +1,15 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsNotEmpty, IsString, MinLength, Validate, ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
+import {
+  IsEmail,
+  IsNotEmpty,
+  IsString,
+  MinLength,
+  Validate,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  ValidationArguments,
+} from 'class-validator';
 import { isValidPhoneNumber } from 'libphonenumber-js';
-
 
 @ValidatorConstraint({ name: 'isAlgerianPhoneNumber', async: false })
 export class IsAlgerianPhoneNumber implements ValidatorConstraintInterface {
@@ -42,7 +50,7 @@ export class RegisterUserDto {
   password: string;
   @ApiProperty({
     example: '0512345678', // Example of an Algerian number
-    description: 'The seller\'s valid Algerian phone number (+213).',
+    description: "The seller's valid Algerian phone number (+213).",
     required: true,
   })
   @IsString()

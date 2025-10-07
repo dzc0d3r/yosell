@@ -10,22 +10,27 @@ import { PoliciesModule } from './policies/policies.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
-
 @Module({
   imports: [
-    HealthModule, PrismaModule, UsersModule, AuthModule, ConfigModule,
-    MessagingModule, VerificationModule, PoliciesModule,
+    HealthModule,
+    PrismaModule,
+    UsersModule,
+    AuthModule,
+    ConfigModule,
+    MessagingModule,
+    VerificationModule,
+    PoliciesModule,
     ThrottlerModule.forRoot([
       {
         name: 'default',
         ttl: 60000, // 1 minute in milliseconds
-        limit: 20,  // 20 requests per minute
+        limit: 20, // 20 requests per minute
       },
     ]),
   ],
   controllers: [],
   providers: [
-     {
+    {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
     },

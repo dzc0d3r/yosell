@@ -12,13 +12,15 @@ export class VerificationService {
     private readonly configService: ConfigService,
   ) {}
 
-async createEmailVerificationLink(userId: string, email: string) {
+  async createEmailVerificationLink(userId: string, email: string) {
     // [UPDATED] Use our secure generator
     const { rawToken, hashedToken } = generateSecureToken();
     const expires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     await this.prisma.$transaction([
-      this.prisma.verificationToken.deleteMany({ where: { identifier: email } }),
+      this.prisma.verificationToken.deleteMany({
+        where: { identifier: email },
+      }),
       this.prisma.verificationToken.create({
         data: {
           identifier: email,
@@ -34,7 +36,7 @@ async createEmailVerificationLink(userId: string, email: string) {
 
     await this.messagingService.sendEmailVerification(email, verificationLink);
   }
-async verifyEmailToken(rawToken: string) {
+  async verifyEmailToken(rawToken: string) {
     // [UPDATED] Hash the incoming raw token to find it in the database
     const hashedToken = hashToken(rawToken);
 
@@ -48,9 +50,11 @@ async verifyEmailToken(rawToken: string) {
 
     // The rest of the transaction logic remains the same, but it's more secure
     await this.prisma.$transaction(async (tx) => {
-      const user = await tx.user.findUnique({ where: { email: verificationToken.identifier }});
+      const user = await tx.user.findUnique({
+        where: { email: verificationToken.identifier },
+      });
       if (!user) throw new NotFoundException('User not found.');
-      
+
       await tx.user.update({
         where: { id: user.id },
         data: { emailVerified: new Date() },

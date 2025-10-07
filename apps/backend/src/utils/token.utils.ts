@@ -4,7 +4,10 @@ import * as crypto from 'node:crypto';
  * Generates a cryptographically secure, URL-safe token and its SHA256 hash.
  * @returns An object containing the raw token (to be sent to the user) and its hash (to be stored in the database).
  */
-export function generateSecureToken(): { rawToken: string; hashedToken: string } {
+export function generateSecureToken(): {
+  rawToken: string;
+  hashedToken: string;
+} {
   const rawToken = crypto.randomBytes(32).toString('base64url');
   const hashedToken = crypto
     .createHash('sha256')

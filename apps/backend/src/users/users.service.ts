@@ -18,9 +18,6 @@ export class UsersService {
     });
   }
 
-
-
-
   async createSeller(data: Prisma.UserCreateInput) {
     return this.prisma.user.create({
       data: {
@@ -29,7 +26,8 @@ export class UsersService {
           connect: { name: 'SELLER' },
         },
       },
-      select: { // Ensure we return all new fields
+      select: {
+        // Ensure we return all new fields
         id: true,
         fullname: true,
         email: true,
